@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { TipoVinculo } from "@prisma/client";
 import { puedeGestionar } from "@/lib/auth-guard";
-import { crearVinculo, eliminarVinculo } from "@/modules/vinculos/application/vinculos";
+import { crearVinculo, eliminarVinculo, aprobarVinculo } from "@/modules/vinculos/application/vinculos";
 
 export type Estado = { error?: string; ok?: string } | undefined;
 
@@ -41,6 +41,15 @@ export async function eliminarVinculoAction(fd: FormData): Promise<void> {
   const id = String(fd.get("id") ?? "");
   if (id) {
     await eliminarVinculo(id);
+    revalidatePath("/vinculos");
+  }
+}
+
+export async function aprobarVinculoAction(fd: FormData): Promise<void> {
+  if (!(await puedeGestionar())) return;
+  const id = String(fd.get("id") ?? "");
+  if (id) {
+    await aprobarVinculo(id);
     revalidatePath("/vinculos");
   }
 }

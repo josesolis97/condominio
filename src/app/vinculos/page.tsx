@@ -5,7 +5,7 @@ import { listarVinculos } from "@/modules/vinculos/application/vinculos";
 import { listarPersonas } from "@/modules/personas/application/personas";
 import { listarDepartamentos } from "@/modules/departamentos/application/departamentos";
 import { CrearVinculoForm } from "./vinculos-ui";
-import { eliminarVinculoAction } from "./actions";
+import { eliminarVinculoAction, aprobarVinculoAction } from "./actions";
 
 export default async function VinculosPage() {
   const [vinculos, personas, deptos, gestiona] = await Promise.all([
@@ -39,6 +39,7 @@ export default async function VinculosPage() {
             <th style={cell}>Persona</th>
             <th style={cell}>Tipo</th>
             <th style={cell}>%</th>
+            <th style={cell}>Estado</th>
             <th style={cell}></th>
           </tr>
         </thead>
@@ -50,11 +51,32 @@ export default async function VinculosPage() {
               <td style={cell}>{v.tipo}</td>
               <td style={cell}>{v.porcentaje != null ? `${v.porcentaje}%` : "—"}</td>
               <td style={cell}>
+                <span
+                  style={{
+                    fontSize: 12,
+                    padding: "2px 8px",
+                    borderRadius: 999,
+                    background: v.estado === "APROBADO" ? "#0d3a22" : "#3a2f0d",
+                    color: v.estado === "APROBADO" ? "#2ecc71" : "#e0b341",
+                  }}
+                >
+                  {v.estado === "APROBADO" ? "Aprobado" : "Pendiente"}
+                </span>
+              </td>
+              <td style={cell}>
                 {gestiona && (
-                  <form action={eliminarVinculoAction}>
-                    <input type="hidden" name="id" value={v.id} />
-                    <button type="submit" style={{ ...botonTenue, color: "#ff6b6b" }}>Quitar</button>
-                  </form>
+                  <span style={{ display: "flex", gap: 6 }}>
+                    {v.estado === "PENDIENTE" && (
+                      <form action={aprobarVinculoAction}>
+                        <input type="hidden" name="id" value={v.id} />
+                        <button type="submit" style={{ ...botonTenue, color: "#2ecc71" }}>Aprobar</button>
+                      </form>
+                    )}
+                    <form action={eliminarVinculoAction}>
+                      <input type="hidden" name="id" value={v.id} />
+                      <button type="submit" style={{ ...botonTenue, color: "#ff6b6b" }}>Quitar</button>
+                    </form>
+                  </span>
                 )}
               </td>
             </tr>

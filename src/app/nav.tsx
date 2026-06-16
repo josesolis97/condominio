@@ -2,11 +2,12 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { cerrarSesion } from "./actions";
 
-const links = [
-  { href: "/", label: "Inicio" },
+// Links de gestión del dominio: SOLO ADMIN/ENCARGADO.
+const linksGestion = [
   { href: "/personas", label: "Personas" },
   { href: "/departamentos", label: "Departamentos" },
   { href: "/estacionamientos", label: "Cocheras" },
+  { href: "/vehiculos", label: "Vehículos" },
   { href: "/vinculos", label: "Vínculos" },
   { href: "/visitas", label: "Visitas" },
   { href: "/reporte", label: "Reporte" },
@@ -14,6 +15,7 @@ const links = [
 
 export async function Nav() {
   const sesion = await auth();
+  const gestiona = sesion?.user?.rol === "ADMIN" || sesion?.user?.rol === "ENCARGADO";
 
   return (
     <header
@@ -30,11 +32,14 @@ export async function Nav() {
       }}
     >
       <nav style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-        {links.map((l) => (
-          <Link key={l.href} href={l.href} style={{ color: "#2ecc71", textDecoration: "none" }}>
-            {l.label}
-          </Link>
-        ))}
+        <Link href="/" style={{ color: "#2ecc71", textDecoration: "none" }}>Inicio</Link>
+        <Link href="/perfil" style={{ color: "#2ecc71", textDecoration: "none" }}>Mi perfil</Link>
+        {gestiona &&
+          linksGestion.map((l) => (
+            <Link key={l.href} href={l.href} style={{ color: "#2ecc71", textDecoration: "none" }}>
+              {l.label}
+            </Link>
+          ))}
         {sesion?.user?.rol === "ADMIN" && (
           <Link href="/usuarios" style={{ color: "#2ecc71", textDecoration: "none" }}>
             Usuarios

@@ -24,7 +24,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!ok) return null;
 
         // Lo que devolvemos acá termina en el token (callback jwt).
-        return { id: usuario.id, email: usuario.email, rol: usuario.rol };
+        return {
+          id: usuario.id,
+          email: usuario.email,
+          rol: usuario.rol,
+          personaId: usuario.personaId,
+        };
       },
     }),
   ],

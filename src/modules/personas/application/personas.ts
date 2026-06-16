@@ -1,37 +1,43 @@
 import { prisma } from "@/lib/prisma";
+import type { TipoDocumento } from "@prisma/client";
 
 export function listarPersonas() {
   return prisma.persona.findMany({
     orderBy: { nombre: "asc" },
-    include: { _count: { select: { vinculos: true } } },
+    include: { _count: { select: { vinculos: true, vehiculos: true } } },
   });
 }
 
-export function crearPersona(input: {
+type PersonaInput = {
   nombre: string;
-  documento?: string | null;
+  tipoDocumento: TipoDocumento;
+  numeroDocumento: string;
+  cuil?: string | null;
   email?: string | null;
   telefono?: string | null;
-}) {
+};
+
+export function crearPersona(input: PersonaInput) {
   return prisma.persona.create({
     data: {
       nombre: input.nombre.trim(),
-      documento: input.documento?.trim() || null,
+      tipoDocumento: input.tipoDocumento,
+      numeroDocumento: input.numeroDocumento.trim(),
+      cuil: input.cuil?.trim() || null,
       email: input.email?.trim() || null,
       telefono: input.telefono?.trim() || null,
     },
   });
 }
 
-export function actualizarPersona(
-  id: string,
-  input: { nombre?: string; documento?: string | null; email?: string | null; telefono?: string | null }
-) {
+export function actualizarPersona(id: string, input: PersonaInput) {
   return prisma.persona.update({
     where: { id },
     data: {
-      ...(input.nombre !== undefined ? { nombre: input.nombre.trim() } : {}),
-      documento: input.documento?.trim() || null,
+      nombre: input.nombre.trim(),
+      tipoDocumento: input.tipoDocumento,
+      numeroDocumento: input.numeroDocumento.trim(),
+      cuil: input.cuil?.trim() || null,
       email: input.email?.trim() || null,
       telefono: input.telefono?.trim() || null,
     },

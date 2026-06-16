@@ -20,22 +20,36 @@ datasource db {
 // Personas y su acceso al sistema
 // ---------------------------------------------------------------------------
 
+enum TipoDocumento {
+  DNI
+  LE // Libreta de Enrolamiento
+  LC // Libreta Cívica
+  CI // Cédula de Identidad
+  PASAPORTE
+}
+
 model Persona {
-  id        String   @id @default(cuid())
-  nombre    String
-  documento String?  @unique
-  email     String?
-  telefono  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String        @id @default(cuid())
+  nombre          String
+  tipoDocumento   TipoDocumento @default(DNI)
+  numeroDocumento String
+  cuil            String? // opcional: el consorcio suele pedirlo a propietarios
+  email           String?
+  telefono        String?
+  fotoUrl         String? // URL en Vercel Blob; el binario NO vive en Postgres
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   // Una persona es propietaria, inquilina o familiar SEGÚN el vínculo.
   vinculos            VinculoUnidad[]
   titularidadCocheras TitularidadCochera[]
   usosCochera         AsignacionUso[]      @relation("OcupanteCochera")
   visitasAutorizadas  RegistroVisita[]     @relation("AutorizanteVisita")
+  vehiculos           Vehiculo[]
   usuario             Usuario?
 
+  // Un DNI y un pasaporte pueden compartir número: el unique es COMPUESTO.
+  @@unique([tipoDocumento, numeroDocumento])
   @@index([nombre])
 }
 
@@ -47,13 +61,17 @@ enum Rol {
 }
 
 model Usuario {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String    @id @default(cuid())
+  email        String    @unique
   passwordHash String
   rol          Rol
-  activo       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  activo       Boolean   @default(true)
+  // Verificación de email (doble opt-in). El auto-registro nace activo=false
+  // y no puede loguear hasta confirmar el mail con este token.
+  tokenVerificacion String?   @unique
+  tokenExpira       DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   // Vínculo OPCIONAL con el dominio: un encargado puede no ser persona del edificio.
   personaId String?  @unique
@@ -83,13 +101,21 @@ enum TipoVinculo {
   FAMILIAR
 }
 
+// PENDIENTE = lo declaró un auto-registro y espera aprobación del admin.
+// APROBADO  = lo cargó/validó el consorcio. Default: lo que crea el admin nace aprobado.
+enum EstadoVinculo {
+  PENDIENTE
+  APROBADO
+}
+
 // El rol de una persona respecto a una unidad. Copropiedad = varias filas
 // PROPIETARIO sobre el mismo departamento (con porcentaje opcional).
 model VinculoUnidad {
-  id         String      @id @default(cuid())
+  id         String        @id @default(cuid())
   tipo       TipoVinculo
-  porcentaje Decimal?    @db.Decimal(5, 2) // solo aplica a PROPIETARIO
-  desde      DateTime    @default(now())
+  estado     EstadoVinculo @default(APROBADO)
+  porcentaje Decimal?      @db.Decimal(5, 2) // solo aplica a PROPIETARIO
+  desde      DateTime      @default(now())
   hasta      DateTime? // null = vínculo vigente
 
   personaId      String
@@ -127,6 +153,9 @@ model Estacionamiento {
   // Para ambas: quién la ocupa a lo largo del tiempo.
   asignaciones  AsignacionUso[]
 
+  // Qué vehículos pueden estacionar acá (con historial).
+  autorizaciones AutorizacionVehiculo[]
+
   @@index([departamentoId])
 }
 
@@ -160,6 +189,55 @@ model AsignacionUso {
 
   @@index([estacionamientoId])
   @@index([ocupanteId])
+}
+
+// ---------------------------------------------------------------------------
+// Vehículos: el auto es de la PERSONA, no del departamento ni de la cochera.
+// ---------------------------------------------------------------------------
+
+enum TipoVehiculo {
+  AUTO
+  MOTO
+  CAMIONETA
+  BICICLETA
+  OTRO
+}
+
+model Vehiculo {
+  id        String       @id @default(cuid())
+  dominio   String       @unique // patente: viejo "AAA123" o Mercosur "AA123BB"
+  tipo      TipoVehiculo @default(AUTO)
+  marca     String?
+  modelo    String?
+  color     String?
+  fotoUrl   String? // URL en Vercel Blob; el binario NO vive en Postgres
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // El dueño. Una persona puede tener varios vehículos.
+  personaId String
+  persona   Persona @relation(fields: [personaId], references: [id], onDelete: Cascade)
+
+  autorizaciones AutorizacionVehiculo[]
+
+  @@index([personaId])
+}
+
+// Qué vehículos PUEDEN estacionar en qué cochera (N:M con vigencia).
+// Distinto de AsignacionUso (persona): esto responde "¿esta patente entra acá?".
+model AutorizacionVehiculo {
+  id    String    @id @default(cuid())
+  desde DateTime  @default(now())
+  hasta DateTime? // null = autorización vigente
+  nota  String?
+
+  vehiculoId        String
+  vehiculo          Vehiculo        @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+  estacionamientoId String
+  estacionamiento   Estacionamiento @relation(fields: [estacionamientoId], references: [id], onDelete: Cascade)
+
+  @@index([vehiculoId])
+  @@index([estacionamientoId])
 }
 
 // ---------------------------------------------------------------------------

@@ -9,20 +9,22 @@ const ADMIN_PASSWORD = "admin12345";
 
 async function main() {
   // Idempotente: limpia en orden de dependencia (hijos primero) antes de insertar.
+  await prisma.autorizacionVehiculo.deleteMany();
   await prisma.registroVisita.deleteMany();
   await prisma.asignacionUso.deleteMany();
   await prisma.titularidadCochera.deleteMany();
   await prisma.vinculoUnidad.deleteMany();
+  await prisma.vehiculo.deleteMany();
   await prisma.estacionamiento.deleteMany();
   await prisma.departamento.deleteMany();
   await prisma.usuario.deleteMany();
   await prisma.persona.deleteMany();
 
-  // --- Personas ---
-  const ana = await prisma.persona.create({ data: { nombre: "Ana Pérez", documento: "30111222" } });
-  const luis = await prisma.persona.create({ data: { nombre: "Luis Pérez", documento: "30111223" } });
-  const sofia = await prisma.persona.create({ data: { nombre: "Sofía Gómez", documento: "28999888" } });
-  const inquilino = await prisma.persona.create({ data: { nombre: "Diego Ruiz", documento: "33444555" } });
+  // --- Personas (documentación argentina) ---
+  const ana = await prisma.persona.create({ data: { nombre: "Ana Pérez", tipoDocumento: "DNI", numeroDocumento: "30111222", cuil: "27-30111222-4" } });
+  const luis = await prisma.persona.create({ data: { nombre: "Luis Pérez", tipoDocumento: "DNI", numeroDocumento: "30111223" } });
+  const sofia = await prisma.persona.create({ data: { nombre: "Sofía Gómez", tipoDocumento: "DNI", numeroDocumento: "28999888" } });
+  const inquilino = await prisma.persona.create({ data: { nombre: "Diego Ruiz", tipoDocumento: "DNI", numeroDocumento: "33444555" } });
 
   // --- Departamentos ---
   const dep5b = await prisma.departamento.create({
@@ -49,7 +51,7 @@ async function main() {
   });
 
   // --- Cochera PEGADA al 5B (sigue la titularidad del depto) ---
-  await prisma.estacionamiento.create({
+  const cocheraPegada = await prisma.estacionamiento.create({
     data: { numero: "12", tipo: "PEGADA", departamentoId: dep5b.id },
   });
 
@@ -62,6 +64,25 @@ async function main() {
   });
   await prisma.asignacionUso.create({
     data: { estacionamientoId: cocheraIndep.id, ocupanteId: ana.id, nota: "Alquiler interno" },
+  });
+
+  // --- Vehículos: Ana tiene DOS autos (un propietario, varios vehículos) ---
+  const autoAna1 = await prisma.vehiculo.create({
+    data: { dominio: "AA123BB", tipo: "AUTO", personaId: ana.id, marca: "Toyota", modelo: "Corolla", color: "Gris" },
+  });
+  await prisma.vehiculo.create({
+    data: { dominio: "AC456DD", tipo: "CAMIONETA", personaId: ana.id, marca: "Ford", modelo: "Ranger", color: "Blanco" },
+  });
+  const motoDiego = await prisma.vehiculo.create({
+    data: { dominio: "A012BCD", tipo: "MOTO", personaId: inquilino.id, marca: "Honda", modelo: "Wave", color: "Rojo" },
+  });
+
+  // --- Autorizaciones: qué vehículos pueden estacionar dónde ---
+  await prisma.autorizacionVehiculo.create({
+    data: { vehiculoId: autoAna1.id, estacionamientoId: cocheraPegada.id, nota: "Auto principal de la familia" },
+  });
+  await prisma.autorizacionVehiculo.create({
+    data: { vehiculoId: motoDiego.id, estacionamientoId: cocheraIndep.id, nota: "Moto del inquilino en cochera alquilada" },
   });
 
   // --- Visita autorizada por la propietaria de 3A ---

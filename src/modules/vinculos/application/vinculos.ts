@@ -3,11 +3,20 @@ import type { TipoVinculo } from "@prisma/client";
 
 export function listarVinculos() {
   return prisma.vinculoUnidad.findMany({
-    orderBy: [{ departamento: { identificador: "asc" } }, { tipo: "asc" }],
+    // Pendientes primero: son los que el admin tiene que revisar.
+    orderBy: [{ estado: "asc" }, { departamento: { identificador: "asc" } }, { tipo: "asc" }],
     include: {
       persona: { select: { nombre: true } },
       departamento: { select: { identificador: true } },
     },
+  });
+}
+
+// El admin confirma un vínculo declarado por un auto-registro.
+export function aprobarVinculo(id: string) {
+  return prisma.vinculoUnidad.update({
+    where: { id },
+    data: { estado: "APROBADO" },
   });
 }
 

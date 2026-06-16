@@ -34,9 +34,9 @@ export default async function PersonasPage() {
             personas.map((p) => (
               <tr key={p.id} style={{ borderTop: "1px solid #1f2833" }}>
                 <td style={cell} colSpan={2}>
-                  {p.nombre} {p.documento ? `· ${p.documento}` : ""}
+                  {p.nombre} · {p.tipoDocumento} {p.numeroDocumento}
                 </td>
-                <td style={cell}>{p._count.vinculos}</td>
+                <td style={cell}>{p._count.vinculos} vínc. · {p._count.vehiculos} veh.</td>
                 <td style={cell}></td>
               </tr>
             ))

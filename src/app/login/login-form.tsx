@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { autenticar } from "./actions";
 
 const input: React.CSSProperties = {
@@ -50,6 +51,10 @@ export function LoginForm() {
       >
         {pending ? "Ingresando…" : "Ingresar"}
       </button>
+
+      <p style={{ textAlign: "center", marginTop: 16, fontSize: 14 }}>
+        ¿No tenés cuenta? <Link href="/registro" style={{ color: "#2ecc71" }}>Registrate</Link>
+      </p>
     </form>
   );
 }

@@ -12,20 +12,25 @@ export const authConfig = {
     // Protege todas las rutas salvo /login. Devuelve false => redirige al login.
     authorized({ auth, request: { nextUrl } }) {
       const logueado = !!auth?.user;
-      const enLogin = nextUrl.pathname.startsWith("/login");
+      // Rutas públicas: login, auto-registro y confirmación de email.
+      const enPublica =
+        nextUrl.pathname.startsWith("/login") ||
+        nextUrl.pathname.startsWith("/registro") ||
+        nextUrl.pathname.startsWith("/verificar");
 
-      if (enLogin) {
-        // Si ya está logueado y va al login, lo mandamos al home.
+      if (enPublica) {
+        // Si ya está logueado y va a una ruta pública, lo mandamos al home.
         if (logueado) return Response.redirect(new URL("/", nextUrl));
         return true;
       }
       return logueado; // resto de rutas: requiere sesión
     },
-    // Pasamos id y rol del usuario al token y luego a la sesión.
+    // Pasamos id, rol y personaId del usuario al token y luego a la sesión.
     jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.rol = (user as { rol?: string }).rol;
+        token.personaId = (user as { personaId?: string | null }).personaId ?? null;
       }
       return token;
     },
@@ -33,6 +38,7 @@ export const authConfig = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.rol = token.rol as string;
+        session.user.personaId = (token.personaId as string | null) ?? null;
       }
       return session;
     },
