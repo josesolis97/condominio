@@ -1,0 +1,185 @@
+// Modelo de dominio: gestión de estacionamientos de un edificio.
+// Principios:
+//   1. Persona != rol      -> el rol lo carga el vínculo, no la entidad.
+//   2. Titularidad != uso  -> soporta alquiler interno de cocheras.
+//   3. Persona != Usuario  -> el dominio vive aunque nadie se loguee.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // Nota: si más adelante usás un pooler (Neon/Supabase en Vercel), agregá:
+  //   directUrl = env("DIRECT_URL")
+  // y poné la conexión directa ahí. Con un Postgres directo NO hace falta.
+}
+
+// ---------------------------------------------------------------------------
+// Personas y su acceso al sistema
+// ---------------------------------------------------------------------------
+
+model Persona {
+  id        String   @id @default(cuid())
+  nombre    String
+  documento String?  @unique
+  email     String?
+  telefono  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Una persona es propietaria, inquilina o familiar SEGÚN el vínculo.
+  vinculos            VinculoUnidad[]
+  titularidadCocheras TitularidadCochera[]
+  usosCochera         AsignacionUso[]      @relation("OcupanteCochera")
+  visitasAutorizadas  RegistroVisita[]     @relation("AutorizanteVisita")
+  usuario             Usuario?
+
+  @@index([nombre])
+}
+
+enum Rol {
+  ADMIN // consorcio/administración: ve y toca todo
+  ENCARGADO // operativo: asigna cocheras, registra movimientos
+  PROPIETARIO // gestiona lo suyo
+  INQUILINO // solo lectura de lo asignado
+}
+
+model Usuario {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  rol          Rol
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Vínculo OPCIONAL con el dominio: un encargado puede no ser persona del edificio.
+  personaId String?  @unique
+  persona   Persona? @relation(fields: [personaId], references: [id], onDelete: SetNull)
+}
+
+// ---------------------------------------------------------------------------
+// Unidades y vínculos persona <-> departamento
+// ---------------------------------------------------------------------------
+
+model Departamento {
+  id            String   @id @default(cuid())
+  piso          String
+  letra         String
+  identificador String   @unique // ej "5B" — para mostrar y buscar
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  vinculos       VinculoUnidad[]
+  estacionamientos Estacionamiento[] // cocheras PEGADAS a esta unidad
+  visitas        RegistroVisita[]
+}
+
+enum TipoVinculo {
+  PROPIETARIO
+  INQUILINO
+  FAMILIAR
+}
+
+// El rol de una persona respecto a una unidad. Copropiedad = varias filas
+// PROPIETARIO sobre el mismo departamento (con porcentaje opcional).
+model VinculoUnidad {
+  id         String      @id @default(cuid())
+  tipo       TipoVinculo
+  porcentaje Decimal?    @db.Decimal(5, 2) // solo aplica a PROPIETARIO
+  desde      DateTime    @default(now())
+  hasta      DateTime? // null = vínculo vigente
+
+  personaId      String
+  persona        Persona      @relation(fields: [personaId], references: [id], onDelete: Cascade)
+  departamentoId String
+  departamento   Departamento @relation(fields: [departamentoId], references: [id], onDelete: Cascade)
+
+  @@index([departamentoId, tipo])
+  @@index([personaId])
+}
+
+// ---------------------------------------------------------------------------
+// Estacionamientos: titularidad y uso separados
+// ---------------------------------------------------------------------------
+
+enum TipoEstacionamiento {
+  PEGADA // su titularidad SIGUE a la del departamento. No se vende/alquila aparte.
+  INDEPENDIENTE // titularidad y uso propios, se pueden mover libremente.
+}
+
+model Estacionamiento {
+  id        String              @id @default(cuid())
+  numero    String              @unique
+  tipo      TipoEstacionamiento
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  // Solo para PEGADA: la unidad cuya titularidad sigue esta cochera.
+  departamentoId String?
+  departamento   Departamento? @relation(fields: [departamentoId], references: [id], onDelete: SetNull)
+
+  // Solo para INDEPENDIENTE: titularidad propia.
+  titularidades TitularidadCochera[]
+
+  // Para ambas: quién la ocupa a lo largo del tiempo.
+  asignaciones  AsignacionUso[]
+
+  @@index([departamentoId])
+}
+
+// Quién POSEE una cochera independiente (copropiedad permitida, con porcentaje).
+model TitularidadCochera {
+  id         String   @id @default(cuid())
+  porcentaje Decimal? @db.Decimal(5, 2)
+  desde      DateTime @default(now())
+  hasta      DateTime?
+
+  personaId         String
+  persona           Persona         @relation(fields: [personaId], references: [id], onDelete: Cascade)
+  estacionamientoId String
+  estacionamiento   Estacionamiento @relation(fields: [estacionamientoId], references: [id], onDelete: Cascade)
+
+  @@index([estacionamientoId])
+  @@index([personaId])
+}
+
+// Quién USA una cochera hoy (puede ser otro propietario => alquiler interno).
+model AsignacionUso {
+  id     String    @id @default(cuid())
+  desde  DateTime  @default(now())
+  hasta  DateTime? // null = asignación vigente
+  nota   String?
+
+  estacionamientoId String
+  estacionamiento   Estacionamiento @relation(fields: [estacionamientoId], references: [id], onDelete: Cascade)
+  ocupanteId        String
+  ocupante          Persona         @relation("OcupanteCochera", fields: [ocupanteId], references: [id], onDelete: Cascade)
+
+  @@index([estacionamientoId])
+  @@index([ocupanteId])
+}
+
+// ---------------------------------------------------------------------------
+// Visitas: EVENTO transitorio, no un vínculo estable.
+// ---------------------------------------------------------------------------
+
+model RegistroVisita {
+  id              String    @id @default(cuid())
+  nombreVisitante String
+  documento       String?
+  ingreso         DateTime  @default(now())
+  egreso          DateTime?
+
+  departamentoId String
+  departamento   Departamento @relation(fields: [departamentoId], references: [id], onDelete: Cascade)
+
+  // Quién autorizó (opcional): una persona del edificio.
+  autorizadoPorId String?
+  autorizadoPor   Persona? @relation("AutorizanteVisita", fields: [autorizadoPorId], references: [id], onDelete: SetNull)
+
+  @@index([departamentoId])
+  @@index([ingreso])
+}
