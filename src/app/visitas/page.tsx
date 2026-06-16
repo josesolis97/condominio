@@ -1,6 +1,6 @@
 import { Nav } from "../nav";
 import { main, tabla, cell, botonTenue } from "../ui";
-import { puedeGestionar } from "@/lib/auth-guard";
+import { puedeGestionar, exigirGestion } from "@/lib/auth-guard";
 import { listarVisitas } from "@/modules/visitas/application/visitas";
 import { listarDepartamentos } from "@/modules/departamentos/application/departamentos";
 import { listarPersonas } from "@/modules/personas/application/personas";
@@ -12,6 +12,7 @@ function fmt(d: Date | null) {
 }
 
 export default async function VisitasPage() {
+  await exigirGestion();
   const [visitas, deptos, personas, gestiona] = await Promise.all([
     listarVisitas(),
     listarDepartamentos(),

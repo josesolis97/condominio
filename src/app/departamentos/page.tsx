@@ -1,10 +1,11 @@
 import { Nav } from "../nav";
 import { main, tabla, cell } from "../ui";
-import { puedeGestionar } from "@/lib/auth-guard";
+import { puedeGestionar, exigirGestion } from "@/lib/auth-guard";
 import { listarDepartamentos } from "@/modules/departamentos/application/departamentos";
 import { CrearDepartamentoForm, FilaDepartamento } from "./departamentos-ui";
 
 export default async function DepartamentosPage() {
+  await exigirGestion();
   const deptos = await listarDepartamentos();
   const gestiona = await puedeGestionar();
 

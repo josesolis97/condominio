@@ -1,10 +1,14 @@
 import { Nav } from "./nav";
 import { main } from "./ui";
+import { exigirGestion } from "@/lib/auth-guard";
 import { listarUnidadesConDetalle } from "@/modules/estacionamientos/application/listar-unidades";
 
 // Server Component: lee del dominio directamente. Si la DB no está lista,
 // muestra un estado vacío en lugar de romper.
 export default async function Home() {
+  // El resumen del edificio es solo para gestión; el vecino va a su perfil.
+  await exigirGestion();
+
   let unidades: Awaited<ReturnType<typeof listarUnidadesConDetalle>> = [];
   let error: string | null = null;
 

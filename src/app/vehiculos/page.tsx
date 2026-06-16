@@ -1,6 +1,6 @@
 import { Nav } from "../nav";
 import { main, tabla, cell, botonTenue } from "../ui";
-import { puedeGestionar } from "@/lib/auth-guard";
+import { puedeGestionar, exigirGestion } from "@/lib/auth-guard";
 import { listarVehiculos } from "@/modules/vehiculos/application/vehiculos";
 import { listarPersonas } from "@/modules/personas/application/personas";
 import { listarEstacionamientos } from "@/modules/estacionamientos/application/estacionamientos";
@@ -8,6 +8,7 @@ import { CrearVehiculoForm, AutorizarForm } from "./vehiculos-ui";
 import { eliminarVehiculoAction, revocarAutorizacionAction } from "./actions";
 
 export default async function VehiculosPage() {
+  await exigirGestion();
   const [vehiculos, personas, cocheras, gestiona] = await Promise.all([
     listarVehiculos(),
     listarPersonas(),

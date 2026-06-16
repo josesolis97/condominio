@@ -1,6 +1,6 @@
 import { Nav } from "../nav";
 import { main, tabla, cell, botonTenue } from "../ui";
-import { puedeGestionar } from "@/lib/auth-guard";
+import { puedeGestionar, exigirGestion } from "@/lib/auth-guard";
 import { listarVinculos } from "@/modules/vinculos/application/vinculos";
 import { listarPersonas } from "@/modules/personas/application/personas";
 import { listarDepartamentos } from "@/modules/departamentos/application/departamentos";
@@ -8,6 +8,7 @@ import { CrearVinculoForm } from "./vinculos-ui";
 import { eliminarVinculoAction, aprobarVinculoAction } from "./actions";
 
 export default async function VinculosPage() {
+  await exigirGestion();
   const [vinculos, personas, deptos, gestiona] = await Promise.all([
     listarVinculos(),
     listarPersonas(),

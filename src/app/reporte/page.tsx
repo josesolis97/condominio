@@ -1,5 +1,6 @@
 import { Nav } from "../nav";
 import { main } from "../ui";
+import { exigirGestion } from "@/lib/auth-guard";
 import { generarReporteGeneral } from "@/modules/reportes/application/reporte-general";
 import { BotonImprimir } from "./boton-imprimir";
 
@@ -28,6 +29,7 @@ function fechaLarga(d: Date) {
 }
 
 export default async function ReportePage() {
+  await exigirGestion();
   const r = await generarReporteGeneral();
 
   return (

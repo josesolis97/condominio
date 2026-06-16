@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 
 export async function esAdmin(): Promise<boolean> {
@@ -16,4 +17,14 @@ export async function puedeGestionar(): Promise<boolean> {
 export async function obtenerPersonaId(): Promise<string | null> {
   const sesion = await auth();
   return sesion?.user?.personaId ?? null;
+}
+
+// Guards a nivel PÁGINA: cierran la puerta de atrás (acceso por URL directa).
+// Un propietario/inquilino que escriba la URL de gestión cae en su perfil.
+export async function exigirGestion(): Promise<void> {
+  if (!(await puedeGestionar())) redirect("/perfil");
+}
+
+export async function exigirAdmin(): Promise<void> {
+  if (!(await esAdmin())) redirect("/perfil");
 }

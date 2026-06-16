@@ -1,11 +1,12 @@
 import { Nav } from "../nav";
 import { main, tabla, cell } from "../ui";
-import { puedeGestionar } from "@/lib/auth-guard";
+import { puedeGestionar, exigirGestion } from "@/lib/auth-guard";
 import { listarEstacionamientos } from "@/modules/estacionamientos/application/estacionamientos";
 import { listarDepartamentos } from "@/modules/departamentos/application/departamentos";
 import { CrearEstacionamientoForm, FilaEstacionamiento } from "./estacionamientos-ui";
 
 export default async function EstacionamientosPage() {
+  await exigirGestion();
   const [cocheras, deptosRaw, gestiona] = await Promise.all([
     listarEstacionamientos(),
     listarDepartamentos(),

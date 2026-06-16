@@ -1,10 +1,11 @@
 import { Nav } from "../nav";
 import { main, tabla, cell } from "../ui";
-import { puedeGestionar } from "@/lib/auth-guard";
+import { puedeGestionar, exigirGestion } from "@/lib/auth-guard";
 import { listarPersonas } from "@/modules/personas/application/personas";
 import { CrearPersonaForm, FilaPersona } from "./personas-ui";
 
 export default async function PersonasPage() {
+  await exigirGestion();
   const personas = await listarPersonas();
   const gestiona = await puedeGestionar();
 
